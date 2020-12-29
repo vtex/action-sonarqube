@@ -1,0 +1,27 @@
+name: 'VTEX app store review action'
+description: 'Review apps using sonarqube'
+inputs:
+  host:
+    description: "SonarQube Server URL"
+    required: true
+  token:
+    description: "Sonarqube token"
+    required: true
+  projectKey:
+    description: "Sonarqube project key. The default key will be 'owner-repository'."
+    required: false
+    default: ""
+  projectName:
+    description: "Sonarqube project name. The default name will be 'owner-repository'."
+    required: false
+    default: ""
+  projectBaseDir:
+    description: "Sonar project base dir. "
+    required: false
+    default: "."
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+branding:
+  icon: 'git-pull-request'
+  color: 'purple'
