@@ -1,7 +1,7 @@
 FROM sonarsource/sonar-scanner-cli
 
-COPY entrypoint.sh entrypoint.sh
+COPY entrypoint.sh /lala.sh
 
-RUN chmod +x entrypoint.sh
+RUN chmod +x /lala.sh
 
-ENTRYPOINT ["bash", "entrypoint.sh"]
+ENTRYPOINT ["sh", "/lala.sh"]
