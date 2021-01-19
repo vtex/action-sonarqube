@@ -1,0 +1,15 @@
+{
+  "name": "action-app-store-review",
+  "version": "1.0.0",
+  "main": "lib/index.ts",
+  "repository": "v:action-app-store-review",
+  "author": "Thayanne Sousa <thayannevls@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {
+    "@actions/core": "^1.2.6",
+    "@actions/exec": "^1.0.4",
+    "@actions/github": "^4.0.0",
+    "axios": "^0.21.1"
+  }
+}
