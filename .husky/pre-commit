@@ -3,4 +3,4 @@
 
 yarn
 yarn build
-git add .
+git add dist/

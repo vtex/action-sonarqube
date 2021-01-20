@@ -1,11 +1,11 @@
-# VTEX app store review action
+# SonarQube Action
 > This project is a working in progress and is subject to breaking changes.
 
-This is a Github action that runs the [SonarScanner](https://docs.sonarqube.org/latest/analysis/scan/sonarscanner/) and send the generated analysis to VTEX SonarQube Server.
+This is a Github action that runs the [SonarScanner](https://docs.sonarqube.org/latest/analysis/scan/sonarscanner/) and add SonarQube Issues in your pull requests.
 
 ## Usage
 
-Before creating your workflow, you need set two secret variables in your repository: The SonarQube server URL and your [SonarQube token](https://docs.sonarqube.org/latest/user-guide/user-token/).
+Before creating your workflow, you need set two secret variables in your repository: The SonarQube server URL and your [SonarQube token](https://docs.sonarqube.org/latest/user-guide/user-token/). The github token secret is automatically created by Github, you just need to reference on your workflow.
 
 ```yml
 name: Some workflow
@@ -24,9 +24,9 @@ jobs:
       - name: Scan code
         uses: vtex/action-app-store-review@main
         with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }} # https://docs.github.com/en/actions/reference/authentication-in-a-workflow#about-the-github_token-secret
           host: ${{ secrets.SQHost }} # Variable set in the Github Secrets
           token: ${{ secrets.SQToken }} # Variable set in the Github Secrets
-          githubToken: ${{ secrets.GITHUB_TOKEN }} # https://docs.github.com/en/actions/reference/authentication-in-a-workflow#about-the-github_token-secret
 ```
 
 ## Variables
@@ -35,6 +35,7 @@ The key and name of the SonarQube project will follow the format `github-owner/g
 
 ```yml
 with:
+    githubToken: ${{ secrets.GITHUB_TOKEN }} #required
     host: ${{ secrets.SQHost }} # required
     token: ${{ secrets.SQToken }} # required
     projectKey: "my-custom-project"
@@ -47,6 +48,24 @@ with:
 Roadmap of the project
 
 - [x] Run SonarScanner
+- [x] Add annotations on pull requests with SonarQube issues
+- [ ] Genereate summary report with SonarQube analysis
 - [ ] Use lint report in the Sonar Scanner
-- [ ] Comment on pull requests the analysis made by the SonarQube. 
 
+## Developing
+
+After cloning the repository, install the dependencies with [`yarn`](https://yarnpkg.com):
+
+```sh
+yarn
+```
+
+When you are ready to submit your code, you just need to commit and the husky pre-commit script will do the build for you. Make sure the build works correctly.
+
+If for some reason you don't want to use husky and want to do the build by yourself, just use the following commands:
+
+```sh
+yarn build
+git add .
+git commit --no-verify
+```
