@@ -10706,73 +10706,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core_1 = __nccwpck_require__(2186);
 const github_1 = __nccwpck_require__(5438);
 const exec = __importStar(__nccwpck_require__(1514));
-const axios_1 = __importDefault(__nccwpck_require__(6545));
+const sonarqube_1 = __importDefault(__nccwpck_require__(7069));
+const utils_1 = __nccwpck_require__(1314);
 // The Checks API limits the number of annotations to a maximum of 50 per API request
 const MAX_ANNOTATIONS_PER_REQUEST = 50;
-const getSQInfo = (repo) => ({
-    projectKey: core_1.getInput('projectKey')
-        ? core_1.getInput('projectKey')
-        : `${repo.owner}-${repo.repo}`,
-    projectName: core_1.getInput('projectName')
-        ? core_1.getInput('projectName')
-        : `${repo.owner}-${repo.repo}`,
-    projectBaseDir: core_1.getInput('projectBaseDir'),
-    host: core_1.getInput('host'),
-    token: core_1.getInput('token'),
-});
-const getScannerCommand = (sonarqube) => `sonar-scanner -Dsonar.projectKey=${sonarqube.projectKey} -Dsonar.projectName=${sonarqube.projectName} -Dsonar.sources=. -Dsonar.projectBaseDir=${sonarqube.projectBaseDir} -Dsonar.login=${sonarqube.token} -Dsonar.host.url=${sonarqube.host}`;
-const getSQProjectIssues = async (sonarqube, pageSize, page) => {
-    const tokenb64 = Buffer.from(`${sonarqube.token}:`).toString('base64');
-    try {
-        const response = await axios_1.default.get(`${sonarqube.host}/api/issues/search?componentKeys=${sonarqube.projectKey}&statuses=OPEN&ps=${pageSize}&p=${page}`, {
-            headers: {
-                Authorization: `Basic ${tokenb64}`,
-            },
-        });
-        const { issues } = response.data;
-        if (pageSize * page >= response.data.paging.total) {
-            return issues;
-        }
-        return issues.concat(await getSQProjectIssues(sonarqube, pageSize, page + 1));
-    }
-    catch (err) {
-        throw new Error('Error getting project issues from SonarQube. Please make sure you provided the host and token inputs.');
-    }
-};
-const componentToPath = (component) => {
-    if (!component.includes(':')) {
-        return component;
-    }
-    const [, path] = component.split(':');
-    return path;
-};
-const getAnnotationLevel = (severity) => {
-    switch (severity) {
-        case 'BLOCKER':
-            return 'failure';
-        case 'CRITICAL':
-            return 'failure';
-        case 'MAJOR':
-            return 'failure';
-        case 'MINOR':
-            return 'warning';
-        case 'INFO':
-            return 'notice';
-        default:
-            return 'notice';
-    }
-};
-const issuesToAnnotations = (issues) => {
-    return issues.map((issue) => {
-        return {
-            path: componentToPath(issue.component),
-            start_line: issue.textRange ? issue.textRange.startLine : 1,
-            end_line: issue.textRange ? issue.textRange.endLine : 1,
-            annotation_level: getAnnotationLevel(issue.severity),
-            message: issue.message,
-        };
-    });
-};
 const createCheckRun = async (octokit, repo, annotations, SQDetailsURL) => {
     core_1.info('Creating check');
     const pullRequest = github_1.context.payload.pull_request;
@@ -10790,18 +10727,129 @@ const createCheckRun = async (octokit, repo, annotations, SQDetailsURL) => {
 };
 async function run() {
     const { repo } = github_1.context;
-    const sonarqube = getSQInfo(repo);
-    const scannerCommand = getScannerCommand(sonarqube);
+    const sonarqube = new sonarqube_1.default(repo);
+    const scannerCommand = sonarqube.getScannerCommand();
     await exec.exec(scannerCommand);
     // Wait for background tasks: https://docs.sonarqube.org/latest/analysis/background-tasks/
     await new Promise((r) => setTimeout(r, 5000));
-    const issues = await getSQProjectIssues(sonarqube, MAX_ANNOTATIONS_PER_REQUEST, 1);
-    const annotations = issuesToAnnotations(issues);
+    const issues = await sonarqube.getIssues({
+        page: 1,
+        pageSize: MAX_ANNOTATIONS_PER_REQUEST,
+    });
+    const annotations = utils_1.issuesToAnnotations(issues);
     const octokit = github_1.getOctokit(core_1.getInput('githubToken'));
-    const SQDetailsURL = `${sonarqube.host}/dashboard?id=${sonarqube.projectKey}`;
+    const SQDetailsURL = `${sonarqube.host}/dashboard?id=${sonarqube.project.projectKey}`;
     await createCheckRun(octokit, repo, annotations, SQDetailsURL);
 }
 run();
+
+
+/***/ }),
+
+/***/ 7069:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const axios_1 = __importDefault(__nccwpck_require__(6545));
+const core_1 = __nccwpck_require__(2186);
+class Sonarqube {
+    constructor(repo) {
+        this.getIssues = async ({ pageSize, page, status = 'OPEN', }) => {
+            try {
+                const response = await this.http.get(`/api/issues/search?componentKeys=${this.project.projectKey}&statuses=${status}&ps=${pageSize}&p=${page}`);
+                if (response.status !== 200 || !response.data) {
+                    return [];
+                }
+                const { data: { issues }, } = response;
+                if (pageSize * page >= response.data.paging.total) {
+                    return issues;
+                }
+                return issues.concat(await this.getIssues({ pageSize, page: page + 1 }));
+            }
+            catch (err) {
+                throw new Error('Error getting project issues from SonarQube. Please make sure you provided the host and token inputs.');
+            }
+        };
+        this.getScannerCommand = () => `sonar-scanner -Dsonar.projectKey=${this.project.projectKey} -Dsonar.projectName=${this.project.projectName} -Dsonar.sources=. -Dsonar.projectBaseDir=${this.project.projectBaseDir} -Dsonar.login=${this.token} -Dsonar.host.url=${this.host}`;
+        this.getInfo = (repo) => ({
+            project: {
+                projectKey: core_1.getInput('projectKey')
+                    ? core_1.getInput('projectKey')
+                    : `${repo.owner}-${repo.repo}`,
+                projectName: core_1.getInput('projectName')
+                    ? core_1.getInput('projectName')
+                    : `${repo.owner}-${repo.repo}`,
+                projectBaseDir: core_1.getInput('projectBaseDir'),
+            },
+            host: core_1.getInput('host'),
+            token: core_1.getInput('token'),
+        });
+        const info = this.getInfo(repo);
+        this.host = info.host;
+        this.token = info.token;
+        this.project = info.project;
+        const tokenb64 = Buffer.from(`${this.token}:`).toString('base64');
+        this.http = axios_1.default.create({
+            baseURL: this.host,
+            timeout: 10000,
+            headers: {
+                Authorization: `Basic ${tokenb64}`,
+            },
+        });
+    }
+}
+exports.default = Sonarqube;
+
+
+/***/ }),
+
+/***/ 1314:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.issuesToAnnotations = void 0;
+const getAnnotationLevel = (severity) => {
+    switch (severity) {
+        case 'BLOCKER':
+            return 'failure';
+        case 'CRITICAL':
+            return 'failure';
+        case 'MAJOR':
+            return 'failure';
+        case 'MINOR':
+            return 'warning';
+        case 'INFO':
+            return 'notice';
+        default:
+            return 'notice';
+    }
+};
+const componentToPath = (component) => {
+    if (!component.includes(':')) {
+        return component;
+    }
+    const [, path] = component.split(':');
+    return path;
+};
+const issuesToAnnotations = (issues) => {
+    return issues.map((issue) => {
+        return {
+            path: componentToPath(issue.component),
+            start_line: issue.textRange ? issue.textRange.startLine : 1,
+            end_line: issue.textRange ? issue.textRange.endLine : 1,
+            annotation_level: getAnnotationLevel(issue.severity),
+            message: issue.message,
+        };
+    });
+};
+exports.issuesToAnnotations = issuesToAnnotations;
 
 
 /***/ }),
