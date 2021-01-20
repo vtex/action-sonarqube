@@ -26,6 +26,7 @@ jobs:
         with:
           host: ${{ secrets.SQHost }} # Variable set in the Github Secrets
           token: ${{ secrets.SQToken }} # Variable set in the Github Secrets
+          githubToken: ${{ secrets.GITHUB_TOKEN }} # https://docs.github.com/en/actions/reference/authentication-in-a-workflow#about-the-github_token-secret
 ```
 
 ## Variables
