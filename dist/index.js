@@ -10775,7 +10775,7 @@ class Sonarqube {
                 throw new Error('Error getting project issues from SonarQube. Please make sure you provided the host and token inputs.');
             }
         };
-        this.getScannerCommand = () => `sonar-scanner -Dsonar.projectKey=${this.project.projectKey} -Dsonar.projectName=${this.project.projectName} -Dsonar.sources=. -Dsonar.projectBaseDir=${this.project.projectBaseDir} -Dsonar.login=${this.token} -Dsonar.host.url=${this.host}`;
+        this.getScannerCommand = () => `sonar-scanner -Dsonar.projectKey=${this.project.projectKey} -Dsonar.projectName=${this.project.projectName} -Dsonar.sources=. -Dsonar.projectBaseDir=${this.project.projectBaseDir} -Dsonar.login=${this.token} -Dsonar.host.url=${this.host} ${this.project.lintReport ? `-Dsonar.eslint.reportPaths=${this.project.lintReport}` : ''}`;
         this.getInfo = (repo) => ({
             project: {
                 projectKey: core_1.getInput('projectKey')
@@ -10785,6 +10785,7 @@ class Sonarqube {
                     ? core_1.getInput('projectName')
                     : `${repo.owner}-${repo.repo}`,
                 projectBaseDir: core_1.getInput('projectBaseDir'),
+                lintReport: core_1.getInput('lintReport')
             },
             host: core_1.getInput('host'),
             token: core_1.getInput('token'),

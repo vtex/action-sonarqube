@@ -41,6 +41,7 @@ with:
     projectKey: "my-custom-project"
     projectName: "my-custom-project-name"
     projectBaseDir: "/path/to/my-custom-project"
+    lintReport:  "/path/to/lint-report-json" https://docs.sonarqube.org/pages/viewpage.action?pageId=11639183
 ```
 
 ## Roadmap

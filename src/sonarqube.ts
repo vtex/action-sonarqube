@@ -50,6 +50,7 @@ export default class Sonarqube {
     projectKey: string
     projectName: string
     projectBaseDir: string
+    lintReport: string
   }
 
   constructor(repo: { owner: string; repo: string }) {
@@ -104,7 +105,7 @@ export default class Sonarqube {
   }
 
   public getScannerCommand = () =>
-    `sonar-scanner -Dsonar.projectKey=${this.project.projectKey} -Dsonar.projectName=${this.project.projectName} -Dsonar.sources=. -Dsonar.projectBaseDir=${this.project.projectBaseDir} -Dsonar.login=${this.token} -Dsonar.host.url=${this.host}`
+    `sonar-scanner -Dsonar.projectKey=${this.project.projectKey} -Dsonar.projectName=${this.project.projectName} -Dsonar.sources=. -Dsonar.projectBaseDir=${this.project.projectBaseDir} -Dsonar.login=${this.token} -Dsonar.host.url=${this.host} ${this.project.lintReport ? `-Dsonar.eslint.reportPaths=${this.project.lintReport}`: ''}`
 
   private getInfo = (repo: { owner: string; repo: string }) => ({
     project: {
@@ -115,6 +116,7 @@ export default class Sonarqube {
         ? getInput('projectName')
         : `${repo.owner}-${repo.repo}`,
       projectBaseDir: getInput('projectBaseDir'),
+      lintReport: getInput('lintReport')
     },
     host: getInput('host'),
     token: getInput('token'),
