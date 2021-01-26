@@ -10,24 +10,65 @@ import { issuesToAnnotations } from './utils'
 // The Checks API limits the number of annotations to a maximum of 50 per API request
 const MAX_ANNOTATIONS_PER_REQUEST = 50
 
-const createCheckRun = async (
-  octokit: InstanceType<typeof GitHub>,
-  repo: { owner: string; repo: string },
-  annotations: Annotation[],
+const createCheckRun = async ({
+  octokit,
+  repo,
+  SQDetailsURL,
+  annotations,
+}: {
+  octokit: InstanceType<typeof GitHub>
+  repo: { owner: string; repo: string }
   SQDetailsURL: string
-) => {
+  annotations?: Annotation[]
+}) => {
   info('Creating check')
   const pullRequest = context.payload.pull_request
   const ref = pullRequest ? pullRequest.head.sha : context.sha
 
   try {
-    await octokit.checks.create({
+    const {
+      data: { id: checkRunId },
+    } = await octokit.checks.create({
       ...repo,
       name: 'Automatic Review with SonarQube',
       head_sha: ref,
       status: 'completed',
       conclusion: 'neutral',
       details_url: SQDetailsURL,
+      output: {
+        title: 'SonarQube',
+        summary: `See more details in [SonarQube](${SQDetailsURL})`,
+        annotations,
+      },
+    })
+
+    return checkRunId
+  } catch (err) {
+    throw new Error(err)
+  }
+}
+
+const updateCheckRun = async ({
+  octokit,
+  repo,
+  checkRunId,
+  annotations,
+  SQDetailsURL,
+}: {
+  octokit: InstanceType<typeof GitHub>
+  repo: { owner: string; repo: string }
+  checkRunId: number
+  annotations: Annotation[]
+  SQDetailsURL: string
+}) => {
+  info('Updating check with annotations')
+
+  try {
+    await octokit.checks.update({
+      ...repo,
+      check_run_id: checkRunId,
+      status: 'completed',
+      conclusion: 'neutral',
       output: {
         title: 'SonarQube',
         summary: `See more details in [SonarQube](${SQDetailsURL})`,
@@ -54,13 +95,23 @@ async function run() {
     pageSize: MAX_ANNOTATIONS_PER_REQUEST,
   })
 
-  const annotations = issuesToAnnotations(issues)
-
   const octokit = getOctokit(getInput('githubToken'))
 
   const SQDetailsURL = `${sonarqube.host}/dashboard?id=${sonarqube.project.projectKey}`
 
-  await createCheckRun(octokit, repo, annotations, SQDetailsURL)
+  const checkRunId = await createCheckRun({ octokit, repo, SQDetailsURL })
+
+  issues.map(async (batch) => {
+    const annotations = issuesToAnnotations(batch)
+
+    await updateCheckRun({
+      octokit,
+      repo,
+      checkRunId,
+      annotations,
+      SQDetailsURL,
+    })
+  })
 }
 
 run()

@@ -1,7 +1,7 @@
 # SonarQube Action
 > This project is a working in progress and is subject to breaking changes.
 
-This is a Github action that runs the [SonarScanner](https://docs.sonarqube.org/latest/analysis/scan/sonarscanner/) and add SonarQube Issues in your pull requests.
+This is a Github action that runs the [SonarScanner](https://docs.sonarqube.org/latest/analysis/scan/sonarscanner/) and add SonarQube Issues as annotations in your pull requests.
 
 ## Usage
 
@@ -41,7 +41,7 @@ with:
     projectKey: "my-custom-project"
     projectName: "my-custom-project-name"
     projectBaseDir: "/path/to/my-custom-project"
-    lintReport:  "/path/to/lint-report-json" https://docs.sonarqube.org/pages/viewpage.action?pageId=11639183
+    lintReport:  "/path/to/lint-report-json" # https://docs.sonarqube.org/pages/viewpage.action?pageId=11639183
 ```
 
 ## Roadmap

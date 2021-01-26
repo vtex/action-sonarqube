@@ -10710,12 +10710,26 @@ const sonarqube_1 = __importDefault(__nccwpck_require__(7069));
 const utils_1 = __nccwpck_require__(1314);
 // The Checks API limits the number of annotations to a maximum of 50 per API request
 const MAX_ANNOTATIONS_PER_REQUEST = 50;
-const createCheckRun = async (octokit, repo, annotations, SQDetailsURL) => {
+const createCheckRun = async ({ octokit, repo, SQDetailsURL, annotations, }) => {
     core_1.info('Creating check');
     const pullRequest = github_1.context.payload.pull_request;
     const ref = pullRequest ? pullRequest.head.sha : github_1.context.sha;
     try {
-        await octokit.checks.create(Object.assign(Object.assign({}, repo), { name: 'Automatic Review with SonarQube', head_sha: ref, status: 'completed', conclusion: 'neutral', details_url: SQDetailsURL, output: {
+        const { data: { id: checkRunId }, } = await octokit.checks.create(Object.assign(Object.assign({}, repo), { name: 'Automatic Review with SonarQube', head_sha: ref, status: 'completed', conclusion: 'neutral', details_url: SQDetailsURL, output: {
+                title: 'SonarQube',
+                summary: `See more details in [SonarQube](${SQDetailsURL})`,
+                annotations,
+            } }));
+        return checkRunId;
+    }
+    catch (err) {
+        throw new Error(err);
+    }
+};
+const updateCheckRun = async ({ octokit, repo, checkRunId, annotations, SQDetailsURL, }) => {
+    core_1.info('Updating check with annotations');
+    try {
+        await octokit.checks.update(Object.assign(Object.assign({}, repo), { check_run_id: checkRunId, status: 'completed', conclusion: 'neutral', output: {
                 title: 'SonarQube',
                 summary: `See more details in [SonarQube](${SQDetailsURL})`,
                 annotations,
@@ -10736,10 +10750,19 @@ async function run() {
         page: 1,
         pageSize: MAX_ANNOTATIONS_PER_REQUEST,
     });
-    const annotations = utils_1.issuesToAnnotations(issues);
     const octokit = github_1.getOctokit(core_1.getInput('githubToken'));
     const SQDetailsURL = `${sonarqube.host}/dashboard?id=${sonarqube.project.projectKey}`;
-    await createCheckRun(octokit, repo, annotations, SQDetailsURL);
+    const checkRunId = await createCheckRun({ octokit, repo, SQDetailsURL });
+    issues.map(async (batch) => {
+        const annotations = utils_1.issuesToAnnotations(batch);
+        await updateCheckRun({
+            octokit,
+            repo,
+            checkRunId,
+            annotations,
+            SQDetailsURL,
+        });
+    });
 }
 run();
 
@@ -10759,23 +10782,26 @@ const axios_1 = __importDefault(__nccwpck_require__(6545));
 const core_1 = __nccwpck_require__(2186);
 class Sonarqube {
     constructor(repo) {
-        this.getIssues = async ({ pageSize, page, status = 'OPEN', }) => {
+        this.getIssues = async ({ pageSize, page, status = 'OPEN', result = [], }) => {
             try {
                 const response = await this.http.get(`/api/issues/search?componentKeys=${this.project.projectKey}&statuses=${status}&ps=${pageSize}&p=${page}`);
                 if (response.status !== 200 || !response.data) {
-                    return [];
+                    return result;
                 }
                 const { data: { issues }, } = response;
+                result.push(issues);
                 if (pageSize * page >= response.data.paging.total) {
-                    return issues;
+                    return result;
                 }
-                return issues.concat(await this.getIssues({ pageSize, page: page + 1 }));
+                return await this.getIssues({ pageSize, page: page + 1, result });
             }
             catch (err) {
                 throw new Error('Error getting project issues from SonarQube. Please make sure you provided the host and token inputs.');
             }
         };
-        this.getScannerCommand = () => `sonar-scanner -Dsonar.projectKey=${this.project.projectKey} -Dsonar.projectName=${this.project.projectName} -Dsonar.sources=. -Dsonar.projectBaseDir=${this.project.projectBaseDir} -Dsonar.login=${this.token} -Dsonar.host.url=${this.host} ${this.project.lintReport ? `-Dsonar.eslint.reportPaths=${this.project.lintReport}` : ''}`;
+        this.getScannerCommand = () => `sonar-scanner -Dsonar.projectKey=${this.project.projectKey} -Dsonar.projectName=${this.project.projectName} -Dsonar.sources=. -Dsonar.projectBaseDir=${this.project.projectBaseDir} -Dsonar.login=${this.token} -Dsonar.host.url=${this.host} ${this.project.lintReport
+            ? `-Dsonar.eslint.reportPaths=${this.project.lintReport}`
+            : ''}`;
         this.getInfo = (repo) => ({
             project: {
                 projectKey: core_1.getInput('projectKey')
@@ -10785,7 +10811,7 @@ class Sonarqube {
                     ? core_1.getInput('projectName')
                     : `${repo.owner}-${repo.repo}`,
                 projectBaseDir: core_1.getInput('projectBaseDir'),
-                lintReport: core_1.getInput('lintReport')
+                lintReport: core_1.getInput('lintReport'),
             },
             host: core_1.getInput('host'),
             token: core_1.getInput('token'),

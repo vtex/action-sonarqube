@@ -74,29 +74,32 @@ export default class Sonarqube {
     pageSize,
     page,
     status = 'OPEN',
+    result = [],
   }: {
     pageSize: number
     page: number
     status?: string
-  }): Promise<Issue[]> => {
+    result?: Array<[Issue]>
+  }): Promise<Array<[Issue]>> => {
     try {
       const response = await this.http.get<IssuesResponseAPI>(
         `/api/issues/search?componentKeys=${this.project.projectKey}&statuses=${status}&ps=${pageSize}&p=${page}`
       )
 
       if (response.status !== 200 || !response.data) {
-        return []
+        return result
       }
 
       const {
         data: { issues },
       } = response
 
+      result.push(issues)
       if (pageSize * page >= response.data.paging.total) {
-        return issues
+        return result
       }
 
-      return issues.concat(await this.getIssues({ pageSize, page: page + 1 }))
+      return await this.getIssues({ pageSize, page: page + 1, result })
     } catch (err) {
       throw new Error(
         'Error getting project issues from SonarQube. Please make sure you provided the host and token inputs.'
@@ -105,7 +108,17 @@ export default class Sonarqube {
   }
 
   public getScannerCommand = () =>
-    `sonar-scanner -Dsonar.projectKey=${this.project.projectKey} -Dsonar.projectName=${this.project.projectName} -Dsonar.sources=. -Dsonar.projectBaseDir=${this.project.projectBaseDir} -Dsonar.login=${this.token} -Dsonar.host.url=${this.host} ${this.project.lintReport ? `-Dsonar.eslint.reportPaths=${this.project.lintReport}`: ''}`
+    `sonar-scanner -Dsonar.projectKey=${
+      this.project.projectKey
+    } -Dsonar.projectName=${
+      this.project.projectName
+    } -Dsonar.sources=. -Dsonar.projectBaseDir=${
+      this.project.projectBaseDir
+    } -Dsonar.login=${this.token} -Dsonar.host.url=${this.host} ${
+      this.project.lintReport
+        ? `-Dsonar.eslint.reportPaths=${this.project.lintReport}`
+        : ''
+    }`
 
   private getInfo = (repo: { owner: string; repo: string }) => ({
     project: {
@@ -116,7 +129,7 @@ export default class Sonarqube {
         ? getInput('projectName')
         : `${repo.owner}-${repo.repo}`,
       projectBaseDir: getInput('projectBaseDir'),
-      lintReport: getInput('lintReport')
+      lintReport: getInput('lintReport'),
     },
     host: getInput('host'),
     token: getInput('token'),
