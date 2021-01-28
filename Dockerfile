@@ -1,7 +1,5 @@
 FROM sonarsource/sonar-scanner-cli
 
-COPY entrypoint.sh /entrypoint.sh
+COPY ./dist /dist
 
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["sh", "/entrypoint.sh"]
+ENTRYPOINT ["node", "/dist/index.js"] 

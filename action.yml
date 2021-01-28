@@ -19,6 +19,12 @@ inputs:
     description: "Sonar project base dir. "
     required: false
     default: "."
+  githubToken:
+    description: "Github token. https://docs.github.com/en/actions/reference/authentication-in-a-workflow#about-the-github_token-secret"
+    required: true
+  lintReport:
+    description: "Path to lint report json file. https://docs.sonarqube.org/pages/viewpage.action?pageId=11639183"
+    required: false
 runs:
   using: 'docker'
   image: 'Dockerfile'
