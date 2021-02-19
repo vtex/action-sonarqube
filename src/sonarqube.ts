@@ -42,6 +42,19 @@ interface IssuesResponseAPI {
   debtTotal: number
   issues: [Issue]
 }
+
+export interface ProjectStatusResponseAPI {
+  projectStatus: {
+    status: 'OK' | 'ERROR'
+    conditions: {
+      status: 'OK' | 'ERROR'
+      metricKey: string
+      comparator: string
+      errorThreshold: number
+      actualValue: number
+    }[]
+  }
+}
 export default class Sonarqube {
   private http: AxiosInstance
   public host: string
@@ -119,6 +132,18 @@ export default class Sonarqube {
         ? `-Dsonar.eslint.reportPaths=${this.project.lintReport}`
         : ''
     }`
+  
+  public getStatus = async () => {
+    const response = await this.http.get<ProjectStatusResponseAPI>(`/api/qualitygates/project_status?projectKey=${this.project.projectKey}`)
+    
+    if (response.status !== 200 || !response.data) {
+      return {}
+    }
+
+    const { data: { projectStatus } } = response
+
+    return projectStatus
+  }
 
   private getInfo = (repo: { owner: string; repo: string }) => ({
     project: {

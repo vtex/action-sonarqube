@@ -3,7 +3,7 @@ import { context, getOctokit } from '@actions/github'
 import type { GitHub } from '@actions/github/lib/utils'
 import * as exec from '@actions/exec'
 
-import Sonarqube from './sonarqube'
+import Sonarqube, { ProjectStatusResponseAPI } from './sonarqube'
 import type { Annotation } from './utils'
 import { issuesToAnnotations } from './utils'
 
@@ -48,6 +48,11 @@ const createCheckRun = async ({
   }
 }
 
+const generateSummary = (stats: ProjectStatusResponseAPI) => `
+### Quality Gate ${stats.projectStatus.status === 'ERROR' ? 'failed': 'passed'}.
+`
+
+
 const updateCheckRun = async ({
   octokit,
   repo,
@@ -62,7 +67,6 @@ const updateCheckRun = async ({
   SQDetailsURL: string
 }) => {
   info('Updating check with annotations')
-
   try {
     await octokit.checks.update({
       ...repo,
@@ -100,6 +104,7 @@ async function run() {
   const SQDetailsURL = `${sonarqube.host}/dashboard?id=${sonarqube.project.projectKey}`
 
   const checkRunId = await createCheckRun({ octokit, repo, SQDetailsURL })
+  const stats = await sonarqube.getStatus()
 
   issues.map(async (batch) => {
     const annotations = issuesToAnnotations(batch)
