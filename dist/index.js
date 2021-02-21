@@ -10710,14 +10710,14 @@ const sonarqube_1 = __importDefault(__nccwpck_require__(7069));
 const utils_1 = __nccwpck_require__(1314);
 // The Checks API limits the number of annotations to a maximum of 50 per API request
 const MAX_ANNOTATIONS_PER_REQUEST = 50;
-const createCheckRun = async ({ octokit, repo, SQDetailsURL, annotations, }) => {
+const createCheckRun = async ({ octokit, repo, summary, annotations, }) => {
     core_1.info('Creating check');
     const pullRequest = github_1.context.payload.pull_request;
     const ref = pullRequest ? pullRequest.head.sha : github_1.context.sha;
     try {
-        const { data: { id: checkRunId }, } = await octokit.checks.create(Object.assign(Object.assign({}, repo), { name: 'Automatic Review with SonarQube', head_sha: ref, status: 'completed', conclusion: 'neutral', details_url: SQDetailsURL, output: {
+        const { data: { id: checkRunId }, } = await octokit.checks.create(Object.assign(Object.assign({}, repo), { name: 'Automatic Review with SonarQube', head_sha: ref, status: 'completed', conclusion: 'neutral', output: {
                 title: 'SonarQube',
-                summary: `See more details in [SonarQube](${SQDetailsURL})`,
+                summary,
                 annotations,
             } }));
         return checkRunId;
@@ -10726,12 +10726,36 @@ const createCheckRun = async ({ octokit, repo, SQDetailsURL, annotations, }) => 
         throw new Error(err);
     }
 };
-const updateCheckRun = async ({ octokit, repo, checkRunId, annotations, SQDetailsURL, }) => {
+const generateSummary = (status, url) => {
+    const conditions = status.conditions.reduce((acc, current) => {
+        switch (current.metricKey) {
+            case 'reliability_rating':
+                return `${acc}Reability ${current.status === 'ERROR' ? ':x:' : ':white_check_mark:'} \n`;
+            case 'security_rating':
+                return `${acc}Security ${current.status === 'ERROR' ? ':x:' : ':white_check_mark:'} \n`;
+            case 'sqale_rating':
+                return `${acc}Security review ${current.status === 'ERROR' ? ':x:' : ':white_check_mark:'} \n`;
+            case 'security_hotspots_reviewed':
+                return `${acc}Security hotspots ${current.status === 'ERROR' ? ':x:' : ':white_check_mark:'} \n`;
+            default:
+                return '';
+        }
+    }, '');
+    return `
+### Quality Gate ${status.status === 'ERROR' ? 'failed :x:' : 'passed :white_check_mark:'}.
+See more details in [SonarQube](${url}).
+
+### Conditions
+${conditions}
+
+`;
+};
+const updateCheckRun = async ({ octokit, repo, checkRunId, annotations, summary, }) => {
     core_1.info('Updating check with annotations');
     try {
         await octokit.checks.update(Object.assign(Object.assign({}, repo), { check_run_id: checkRunId, status: 'completed', conclusion: 'neutral', output: {
                 title: 'SonarQube',
-                summary: `See more details in [SonarQube](${SQDetailsURL})`,
+                summary,
                 annotations,
             } }));
     }
@@ -10752,7 +10776,11 @@ async function run() {
     });
     const octokit = github_1.getOctokit(core_1.getInput('githubToken'));
     const SQDetailsURL = `${sonarqube.host}/dashboard?id=${sonarqube.project.projectKey}`;
-    const checkRunId = await createCheckRun({ octokit, repo, SQDetailsURL });
+    const status = await sonarqube.getStatus();
+    const summary = status
+        ? generateSummary(status, SQDetailsURL)
+        : `See more details in [SonarQube](${SQDetailsURL})`;
+    const checkRunId = await createCheckRun({ octokit, repo, summary });
     issues.map(async (batch) => {
         const annotations = utils_1.issuesToAnnotations(batch);
         await updateCheckRun({
@@ -10760,7 +10788,7 @@ async function run() {
             repo,
             checkRunId,
             annotations,
-            SQDetailsURL,
+            summary,
         });
     });
 }
@@ -10802,6 +10830,14 @@ class Sonarqube {
         this.getScannerCommand = () => `sonar-scanner -Dsonar.projectKey=${this.project.projectKey} -Dsonar.projectName=${this.project.projectName} -Dsonar.sources=. -Dsonar.projectBaseDir=${this.project.projectBaseDir} -Dsonar.login=${this.token} -Dsonar.host.url=${this.host} ${this.project.lintReport
             ? `-Dsonar.eslint.reportPaths=${this.project.lintReport}`
             : ''}`;
+        this.getStatus = async () => {
+            const response = await this.http.get(`/api/qualitygates/project_status?projectKey=${this.project.projectKey}`);
+            if (response.status !== 200 || !response.data) {
+                return null;
+            }
+            const { data: { projectStatus }, } = response;
+            return projectStatus;
+        };
         this.getInfo = (repo) => ({
             project: {
                 projectKey: core_1.getInput('projectKey')

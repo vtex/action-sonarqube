@@ -3,7 +3,8 @@ import { context, getOctokit } from '@actions/github'
 import type { GitHub } from '@actions/github/lib/utils'
 import * as exec from '@actions/exec'
 
-import Sonarqube, { ProjectStatusResponseAPI } from './sonarqube'
+import type { ProjectStatus } from './sonarqube'
+import Sonarqube from './sonarqube'
 import type { Annotation } from './utils'
 import { issuesToAnnotations } from './utils'
 
@@ -13,12 +14,12 @@ const MAX_ANNOTATIONS_PER_REQUEST = 50
 const createCheckRun = async ({
   octokit,
   repo,
-  SQDetailsURL,
+  summary,
   annotations,
 }: {
   octokit: InstanceType<typeof GitHub>
   repo: { owner: string; repo: string }
-  SQDetailsURL: string
+  summary: string
   annotations?: Annotation[]
 }) => {
   info('Creating check')
@@ -34,10 +35,9 @@ const createCheckRun = async ({
       head_sha: ref,
       status: 'completed',
       conclusion: 'neutral',
-      details_url: SQDetailsURL,
       output: {
         title: 'SonarQube',
-        summary: `See more details in [SonarQube](${SQDetailsURL})`,
+        summary,
         annotations,
       },
     })
@@ -48,23 +48,58 @@ const createCheckRun = async ({
   }
 }
 
-const generateSummary = (stats: ProjectStatusResponseAPI) => `
-### Quality Gate ${stats.projectStatus.status === 'ERROR' ? 'failed': 'passed'}.
-`
+const generateSummary = (status: ProjectStatus, url: string) => {
+  const conditions = status.conditions.reduce<string>((acc, current) => {
+    switch (current.metricKey) {
+      case 'reliability_rating':
+        return `${acc}Reability ${
+          current.status === 'ERROR' ? ':x:' : ':white_check_mark:'
+        } \n`
 
+      case 'security_rating':
+        return `${acc}Security ${
+          current.status === 'ERROR' ? ':x:' : ':white_check_mark:'
+        } \n`
+
+      case 'sqale_rating':
+        return `${acc}Security review ${
+          current.status === 'ERROR' ? ':x:' : ':white_check_mark:'
+        } \n`
+
+      case 'security_hotspots_reviewed':
+        return `${acc}Security hotspots ${
+          current.status === 'ERROR' ? ':x:' : ':white_check_mark:'
+        } \n`
+
+      default:
+        return ''
+    }
+  }, '')
+
+  return `
+### Quality Gate ${
+    status.status === 'ERROR' ? 'failed :x:' : 'passed :white_check_mark:'
+  }.
+See more details in [SonarQube](${url}).
+
+### Conditions
+${conditions}
+
+`
+}
 
 const updateCheckRun = async ({
   octokit,
   repo,
   checkRunId,
   annotations,
-  SQDetailsURL,
+  summary,
 }: {
   octokit: InstanceType<typeof GitHub>
   repo: { owner: string; repo: string }
   checkRunId: number
   annotations: Annotation[]
-  SQDetailsURL: string
+  summary: string
 }) => {
   info('Updating check with annotations')
   try {
@@ -75,7 +110,7 @@ const updateCheckRun = async ({
       conclusion: 'neutral',
       output: {
         title: 'SonarQube',
-        summary: `See more details in [SonarQube](${SQDetailsURL})`,
+        summary,
         annotations,
       },
     })
@@ -103,8 +138,12 @@ async function run() {
 
   const SQDetailsURL = `${sonarqube.host}/dashboard?id=${sonarqube.project.projectKey}`
 
-  const checkRunId = await createCheckRun({ octokit, repo, SQDetailsURL })
-  const stats = await sonarqube.getStatus()
+  const status = await sonarqube.getStatus()
+  const summary = status
+    ? generateSummary(status, SQDetailsURL)
+    : `See more details in [SonarQube](${SQDetailsURL})`
+
+  const checkRunId = await createCheckRun({ octokit, repo, summary })
 
   issues.map(async (batch) => {
     const annotations = issuesToAnnotations(batch)
@@ -114,7 +153,7 @@ async function run() {
       repo,
       checkRunId,
       annotations,
-      SQDetailsURL,
+      summary,
     })
   })
 }

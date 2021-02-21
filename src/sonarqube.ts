@@ -43,17 +43,19 @@ interface IssuesResponseAPI {
   issues: [Issue]
 }
 
-export interface ProjectStatusResponseAPI {
-  projectStatus: {
+export interface ProjectStatus {
+  status: 'OK' | 'ERROR'
+  conditions: Array<{
     status: 'OK' | 'ERROR'
-    conditions: {
-      status: 'OK' | 'ERROR'
-      metricKey: string
-      comparator: string
-      errorThreshold: number
-      actualValue: number
-    }[]
-  }
+    metricKey: string
+    comparator: string
+    errorThreshold: number
+    actualValue: number
+  }>
+}
+
+export interface ProjectStatusResponseAPI {
+  projectStatus: ProjectStatus
 }
 export default class Sonarqube {
   private http: AxiosInstance
@@ -132,15 +134,19 @@ export default class Sonarqube {
         ? `-Dsonar.eslint.reportPaths=${this.project.lintReport}`
         : ''
     }`
-  
-  public getStatus = async () => {
-    const response = await this.http.get<ProjectStatusResponseAPI>(`/api/qualitygates/project_status?projectKey=${this.project.projectKey}`)
-    
+
+  public getStatus = async (): Promise<ProjectStatus | null> => {
+    const response = await this.http.get<ProjectStatusResponseAPI>(
+      `/api/qualitygates/project_status?projectKey=${this.project.projectKey}`
+    )
+
     if (response.status !== 200 || !response.data) {
-      return {}
+      return null
     }
 
-    const { data: { projectStatus } } = response
+    const {
+      data: { projectStatus },
+    } = response
 
     return projectStatus
   }
