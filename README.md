@@ -1,5 +1,4 @@
 # SonarQube Action
-> This project is a working in progress and is subject to breaking changes.
 
 This is a Github action that runs the [SonarScanner](https://docs.sonarqube.org/latest/analysis/scan/sonarscanner/) and add SonarQube Issues as annotations in your pull requests.
 
@@ -22,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Scan code
-        uses: vtex/action-app-store-review@main
+        uses: vtex/action-sonarqube@main
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }} # https://docs.github.com/en/actions/reference/authentication-in-a-workflow#about-the-github_token-secret
           host: ${{ secrets.SQHost }} # Variable set in the Github Secrets
@@ -50,7 +49,7 @@ Roadmap of the project
 
 - [x] Run SonarScanner
 - [x] Add annotations on pull requests with SonarQube issues
-- [ ] Genereate summary report with SonarQube analysis
+- [x] Genereate summary report with SonarQube analysis
 - [ ] Use lint report in the Sonar Scanner
 
 ## Developing

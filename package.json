@@ -1,8 +1,8 @@
 {
-  "name": "action-app-store-review",
+  "name": "action-sonarqube",
   "version": "1.0.0",
   "main": "lib/index.ts",
-  "repository": "v:action-app-store-review",
+  "repository": "https://github.com/vtex/action-sonarqube",
   "author": "Thayanne Sousa <thayannevls@gmail.com>",
   "license": "MIT",
   "scripts": {

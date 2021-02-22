@@ -1,5 +1,5 @@
-name: 'VTEX app store review action'
-description: 'Review apps using sonarqube'
+name: 'Action SonarQube'
+description: 'Scan code using Sonarqube and show issues in pull requests.'
 inputs:
   host:
     description: "SonarQube Server URL"
