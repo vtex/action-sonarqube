@@ -20,6 +20,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: Install dependencies
+        run: yarn install --production=false
       - name: Scan code
         uses: vtex/action-sonarqube@main
         with:
@@ -27,6 +29,8 @@ jobs:
           host: ${{ secrets.SQHost }} # Variable set in the Github Secrets
           token: ${{ secrets.SQToken }} # Variable set in the Github Secrets
 ```
+
+> If your project uses `typescript`, you need to install the dependencies. If not, you can remove the installation step.
 
 ## Variables
 
@@ -50,7 +54,7 @@ Roadmap of the project
 - [x] Run SonarScanner
 - [x] Add annotations on pull requests with SonarQube issues
 - [x] Genereate summary report with SonarQube analysis
-- [ ] Use lint report in the Sonar Scanner
+- [x] Use lint report in the Sonar Scanner
 
 ## Developing
 
