@@ -2,6 +2,8 @@ FROM mcr.microsoft.com/dotnet/sdk:5.0
 WORKDIR /app
 
 RUN dotnet tool install --global dotnet-sonarscanner
+RUN apt-get update && apt-get install -y openjdk-11-jdk
+
 ENV PATH="${PATH}:/root/.dotnet/tools"
 
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \ 
