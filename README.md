@@ -28,6 +28,8 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }} # https://docs.github.com/en/actions/reference/authentication-in-a-workflow#about-the-github_token-secret
           host: ${{ secrets.SQHost }} # Variable set in the Github Secrets
           token: ${{ secrets.SQToken }} # Variable set in the Github Secrets
+          buildCommand: dotnet build <PATH TO SLN and aditional parameters> 
+          restoreCommand: dotnet restore <PATH TO SLN and aditional parameters> 
 ```
 
 > If your project uses `typescript`, you need to install the dependencies. If not, you can remove the installation step.
@@ -44,6 +46,8 @@ with:
     projectKey: "my-custom-project"
     projectName: "my-custom-project-name"
     projectBaseDir: "/path/to/my-custom-project"
+    buildCommand: dotnet build <PATH TO SLN and aditional parameters> 
+    restoreCommand: dotnet restore <PATH TO SLN and aditional parameters> 
     lintReport:  "/path/to/lint-report-json" # https://docs.sonarqube.org/pages/viewpage.action?pageId=11639183
 ```
 
