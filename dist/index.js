@@ -10766,10 +10766,8 @@ const updateCheckRun = async ({ octokit, repo, checkRunId, annotations, summary,
 async function run() {
     const { repo } = github_1.context;
     const sonarqube = new sonarqube_1.default(repo);
-    const { beginScanner, build, endScanner } = sonarqube.getCommands();
-    await exec.exec(beginScanner);
-    await exec.exec(build);
-    await exec.exec(endScanner);
+    const scannerCommand = sonarqube.getScannerCommand();
+    await exec.exec(scannerCommand);
     // Wait for background tasks: https://docs.sonarqube.org/latest/analysis/background-tasks/
     await new Promise((r) => setTimeout(r, 5000));
     const issues = await sonarqube.getIssues({
@@ -10829,13 +10827,9 @@ class Sonarqube {
                 throw new Error('Error getting project issues from SonarQube. Please make sure you provided the host and token inputs.');
             }
         };
-        this.getCommands = () => {
-            return {
-                beginScanner: `dotnet-sonarscanner begin -k:"${this.project.projectKey}" -d:sonar.login="${this.token}" -d:sonar.host.url=${this.host}`,
-                build: core_1.getInput('buildCommand'),
-                endScanner: `dotnet-sonarscanner end -d:sonar.login="${this.token}"`
-            };
-        };
+        this.getScannerCommand = () => `sonar-scanner -Dsonar.projectKey=${this.project.projectKey} -Dsonar.projectName=${this.project.projectName} -Dsonar.sources=. -Dsonar.projectBaseDir=${this.project.projectBaseDir} -Dsonar.login=${this.token} -Dsonar.host.url=${this.host} ${this.project.lintReport
+            ? `-Dsonar.eslint.reportPaths=${this.project.lintReport}`
+            : ''}`;
         this.getStatus = async () => {
             const response = await this.http.get(`/api/qualitygates/project_status?projectKey=${this.project.projectKey}`);
             if (response.status !== 200 || !response.data) {

@@ -25,9 +25,6 @@ inputs:
   lintReport:
     description: "Path to lint report json file. https://docs.sonarqube.org/pages/viewpage.action?pageId=11639183"
     required: false
-  buildCommand:
-    description: "Dotnet build command"
-    required: true
 runs:
   using: 'docker'
   image: 'Dockerfile'
