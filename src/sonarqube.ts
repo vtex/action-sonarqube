@@ -122,18 +122,13 @@ export default class Sonarqube {
     }
   }
 
-  public getScannerCommand = () =>
-    `sonar-scanner -Dsonar.projectKey=${
-      this.project.projectKey
-    } -Dsonar.projectName=${
-      this.project.projectName
-    } -Dsonar.sources=. -Dsonar.projectBaseDir=${
-      this.project.projectBaseDir
-    } -Dsonar.login=${this.token} -Dsonar.host.url=${this.host} ${
-      this.project.lintReport
-        ? `-Dsonar.eslint.reportPaths=${this.project.lintReport}`
-        : ''
-    }`
+  public getCommands = () => {
+    return {
+      beginScanner: `dotnet-sonarscanner begin -k:"${this.project.projectKey}" -d:sonar.login="${this.token}" -d:sonar.host.url=${this.host}`,
+      build: getInput('buildCommand'),
+      endScanner: `dotnet-sonarscanner end -d:sonar.login="${this.token}"`
+    }
+  }
 
   public getStatus = async (): Promise<ProjectStatus | null> => {
     const response = await this.http.get<ProjectStatusResponseAPI>(

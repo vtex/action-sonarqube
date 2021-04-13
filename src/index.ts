@@ -123,9 +123,11 @@ async function run() {
   const { repo } = context
   const sonarqube = new Sonarqube(repo)
 
-  const scannerCommand = sonarqube.getScannerCommand()
-
-  await exec.exec(scannerCommand)
+  const { beginScanner, build, endScanner } = sonarqube.getCommands()
+  
+  await exec.exec(beginScanner)
+  await exec.exec(build)
+  await exec.exec(endScanner)
   // Wait for background tasks: https://docs.sonarqube.org/latest/analysis/background-tasks/
   await new Promise((r) => setTimeout(r, 5000))
 
