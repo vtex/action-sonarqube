@@ -1,7 +1,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:5.0
 WORKDIR /app
 
+RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1
 RUN apt-get update && apt-get install -y openjdk-11-jdk
+
 RUN dotnet tool install --global dotnet-sonarscanner
 
 ENV PATH="${PATH}:/root/.dotnet/tools"
