@@ -52,7 +52,7 @@ const generateSummary = (status: ProjectStatus, url: string) => {
   const conditions = status.conditions.reduce<string>((acc, current) => {
     switch (current.metricKey) {
       case 'reliability_rating':
-        return `${acc}Reability ${
+        return `${acc}Reliability ${
           current.status === 'ERROR' ? ':x:' : ':white_check_mark:'
         } \n`
 
