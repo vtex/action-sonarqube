@@ -123,8 +123,9 @@ export default class Sonarqube {
   }
 
   public getCommands = () => {
+    const baseBeginScanner = `dotnet-sonarscanner begin -k:"${this.project.projectKey}" -d:sonar.login="${this.token}" -d:sonar.host.url=${this.host}` 
     return {
-      beginScanner: `dotnet-sonarscanner begin -k:"${this.project.projectKey}" -d:sonar.login="${this.token}" -d:sonar.host.url=${this.host}`,
+      beginScanner: baseBeginScanner + (getInput('analysisParameters') || ``),
       build: getInput('buildCommand'),
       endScanner: `dotnet-sonarscanner end -d:sonar.login="${this.token}"`
     }
