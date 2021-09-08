@@ -28,6 +28,9 @@ inputs:
   buildCommand:
     description: "Dotnet build command"
     required: true
+  analysisParameters:
+    description: "Dotnet analysis args. https://docs.sonarqube.org/latest/analysis/analysis-parameters/"
+    required: false
 runs:
   using: 'docker'
   image: 'Dockerfile'
