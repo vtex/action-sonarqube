@@ -10730,7 +10730,7 @@ const generateSummary = (status, url) => {
     const conditions = status.conditions.reduce((acc, current) => {
         switch (current.metricKey) {
             case 'reliability_rating':
-                return `${acc}Reability ${current.status === 'ERROR' ? ':x:' : ':white_check_mark:'} \n`;
+                return `${acc}Reliability ${current.status === 'ERROR' ? ':x:' : ':white_check_mark:'} \n`;
             case 'security_rating':
                 return `${acc}Security ${current.status === 'ERROR' ? ':x:' : ':white_check_mark:'} \n`;
             case 'sqale_rating':
@@ -10830,8 +10830,11 @@ class Sonarqube {
             }
         };
         this.getCommands = () => {
+            var _a;
+            const parameters = ((_a = core_1.getInput('analysisParameters')) !== null && _a !== void 0 ? _a : ``);
+            const baseBeginScanner = `dotnet-sonarscanner begin -k:"${this.project.projectKey}" -d:sonar.login="${this.token}" -d:sonar.host.url=${this.host} `;
             return {
-                beginScanner: `dotnet-sonarscanner begin -k:"${this.project.projectKey}" -d:sonar.login="${this.token}" -d:sonar.host.url=${this.host}`,
+                beginScanner: baseBeginScanner + parameters,
                 build: core_1.getInput('buildCommand'),
                 endScanner: `dotnet-sonarscanner end -d:sonar.login="${this.token}"`
             };

@@ -23,13 +23,14 @@ jobs:
       - name: Install dependencies
         run: yarn install --production=false
       - name: Scan code
-        uses: vtex/action-sonarqube@main
+        uses: vtex/action-sonarqube@dotnet
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }} # https://docs.github.com/en/actions/reference/authentication-in-a-workflow#about-the-github_token-secret
           host: ${{ secrets.SQHost }} # Variable set in the Github Secrets
-          token: ${{ secrets.SQToken }} # Variable set in the Github Secrets
+          token: ${{ secrets.SQToken }} # Variable set in the Github Secrets          
           buildCommand: dotnet build <PATH TO SLN and aditional parameters> 
-          restoreCommand: dotnet restore <PATH TO SLN and aditional parameters> 
+          restoreCommand: dotnet restore <PATH TO SLN and aditional parameters>
+          analysisParameters: -d:sonar.exclusions="**/PATH_TO_EXCLUDE/**" -d:sonar.coverage.exclusions="**/PATH_TO_EXCLUDE/**" #parameters: https://docs.sonarqube.org/latest/analysis/analysis-parameters/
 ```
 
 > If your project uses `typescript`, you need to install the dependencies. If not, you can remove the installation step.
@@ -49,6 +50,7 @@ with:
     buildCommand: dotnet build <PATH TO SLN and aditional parameters> 
     restoreCommand: dotnet restore <PATH TO SLN and aditional parameters> 
     lintReport:  "/path/to/lint-report-json" # https://docs.sonarqube.org/pages/viewpage.action?pageId=11639183
+    analysisParameters: -d:sonar.exclusions="**/PATH_TO_EXCLUDE/**" -d:sonar.coverage.exclusions="**/PATH_TO_EXCLUDE/**" #parameters: https://docs.sonarqube.org/latest/analysis/analysis-parameters/
 ```
 
 ## Roadmap
