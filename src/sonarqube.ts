@@ -123,9 +123,11 @@ export default class Sonarqube {
   }
 
   public getCommands = () => {
-    const baseBeginScanner = `dotnet-sonarscanner begin -k:"${this.project.projectKey}" -d:sonar.login="${this.token}" -d:sonar.host.url=${this.host} ` 
+    const parameters = (getInput('analysisParameters') ?? ``)
+    console.log('parameters: ', parameters)
+    const baseBeginScanner = `dotnet-sonarscanner begin -k:"${this.project.projectKey}" -d:sonar.login="${this.token}" -d:sonar.host.url=${this.host} -d:sonar.exclusions="**/Vtex.Practices.Do.Reindexer/**" -d:sonar.coverage.exclusions="**/Vtex.Practices.Do.Reindexer/**" -d:sonar.cs.opencover.reportsPaths="**/TestResults/coverage.opencover.xml" -d:sonar.cs.vstest.reportsPaths="**/TestResults/testresult.xml" ` 
     return {
-      beginScanner: baseBeginScanner + (getInput('analysisParameters') ?? ``),
+      beginScanner: baseBeginScanner + parameters,
       build: getInput('buildCommand'),
       endScanner: `dotnet-sonarscanner end -d:sonar.login="${this.token}"`
     }
